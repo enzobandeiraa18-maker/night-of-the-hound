@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Night of the Hound</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+html,body{margin:0;background:#000;color:#fff;font-family:Arial;overflow:hidden}
+#menu,#game{width:100vw;height:100vh}
+#menu{display:flex;flex-direction:column;justify-content:center;align-items:center}
+button{background:#111;color:#fff;border:2px solid #444;border-radius:12px;padding:15px;width:220px;margin:10px;font-size:18px}
+#game{display:none;position:relative}
+#hud{position:absolute;top:10px;left:10px}
+#darkness{position:absolute;inset:0;background:radial-gradient(circle,transparent 90px,rgba(0,0,0,.95) 230px);display:none}
+#monster{position:absolute;top:20%;left:50%;transform:translateX(-50%) scale(.4);opacity:0;transition:.3s}
+#monster.show{opacity:.6}
+#monster.attack{opacity:1;transform:translateX(-50%) scale(1.4)}
+#ui{position:absolute;bottom:10px;width:100%;display:flex;justify-content:space-around}
+#msg{position:absolute;top:45%;width:100%;text-align:center;font-size:24px}
+svg{width:300px;height:300px}
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+  <h1>🐶 Night of the Hound</h1>
+  <button onclick="start()">Continuar</button>
+  <button onclick="newGame()">Nova Noite</button>
+</div>
+
+<div id="game">
+  <div id="hud"></div>
+
+  <!-- MONSTRO SVG -->
+  <div id="monster">
+    <svg viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="80" fill="#111"/>
+      <circle cx="70" cy="80" r="10" fill="red"/>
+      <circle cx="130" cy="80" r="10" fill="red"/>
+      <rect x="70" y="120" width="60" height="20" fill="#300"/>
+    </svg>
+  </div>
+
+  <div id="msg"></div>
+  <div id="darkness"></div>
+
+  <div id="ui">
+    <button onclick="door('left')">🚪 ESQ</button>
+    <button onclick="flash()">🔦 LUZ</button>
+    <button onclick="door('right')">🚪 DIR</button>
+  </div>
+</div>
+
+<script>
+/* ===== AUDIO ENGINE ===== */
+const ctx=new (window.AudioContext||webkitAudioContext)();
+function sound(freq,dur,type="sine",vol=.2){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type;o.frequency.value=freq;
+  g.gain.value=vol;
+  o.connect(g);g.connect(ctx.destination);
+  o.start();setTimeout(()=>o.stop(),dur);
+}
+function breath(){sound(90,400,"sine",.05)}
+function step(){sound(200,100,"square",.05)}
+function scare(){sound(40,700,"sawtooth",.4)}
+function click(){sound(600,80,"triangle",.1)}
+
+/* ===== GAME ===== */
+let night=+localStorage.getItem("night")||1;
+let hour=12,agg=0,pos="hall",over=false;
+
+const monster=document.getElementById("monster");
+
+function start(){
+  document.getElementById("menu").style.display="none";
+  document.getElementById("game").style.display="block";
+  updateHUD();
+}
+function newGame(){night=1;localStorage.setItem("night",1);start()}
+function updateHUD(){hud.innerText=`Noite ${night} — ${hour}:00 AM`}
+
+function move(){
+  if(over)return;
+  pos=["hall","left","right"][Math.floor(Math.random()*3)];
+  agg+=.5+night*.4;
+  step();
+  if(pos!="hall"){monster.classList.add("show");breath()}
+  else monster.classList.remove("show");
+  if(agg>6+night)jumpscare();
+}
+function door(s){
+  click();
+  if(pos===s){agg-=1.5;monster.classList.remove("show");msg("Respiração...")}
+  else{agg+=1.2;msg("Nada.")}
+}
+function flash(){
+  click();
+  darkness.style.display="block";
+  setTimeout(()=>darkness.style.display="none",500);
+  if(pos==="hall"){agg-=2;msg("Ele recuou")}
+  else{agg+=1;msg("A luz irritou")}
+}
+function jumpscare(){
+  over=true;
+  monster.classList.add("attack");
+  scare();
+  msg("ELE NUNCA FOI EMBORA");
+  setTimeout(()=>location.reload(),3000);
+}
+function nextHour(){
+  if(over)return;
+  hour++;
+  if(hour>=6){night++;localStorage.setItem("night",night);hour=12;agg=0;msg("Noite "+night)}
+  updateHUD();
+}
+function msg(t){msgBox.innerText=t;setTimeout(()=>msgBox.innerText="",1200)}
+
+const hud=document.getElementById("hud");
+const msgBox=document.getElementById("msg");
+
+setInterval(move,3000);
+setInterval(nextHour,9000);
+</script>
+
+</body>
+</html>
